@@ -9,4 +9,4 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 hyper = "0.14"
-url = "2.3"
+tokio-stream = "0.1"
