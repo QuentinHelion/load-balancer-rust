@@ -1,31 +1,28 @@
 mod responder;
 
 use std::net::TcpListener;
+use std::net::TcpStream;
 
 use responder::handle_client;
 use responder::generator;
 use responder::response;
 
+use tokio::task;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let listener = TcpListener::bind("127.0.0.1:8080").expect("Failed to bind to address");
 
     println!("Listening on 127.0.0.1:8080...");
 
-    for stream in listener.incoming() {
-        
-        match stream {
-            
-            Ok(stream) => {
-                let stream_buff = stream.try_clone().expect("Failed to clone stream");
-                std::thread::spawn(|| {
-                    handle_client(stream);
-                });
 
-                let gene = generator("200 OK", "text/plain", "Hello world!");
-                response(gene, stream_buff);
-            }
-            Err(e) => eprintln!("Error accepting connection: {}", e),
-        }
+    while let Ok((stream, _)) = listener.accept() {
+        let stream_buff = stream.try_clone().expect("Failed to clone stream");
+        let gen_resp = generator("200 OK", "text/plain", "Hello world ");
+        task::spawn(async {
+            handle_client(stream);
+            response(gen_resp, stream_buff);
+        });
+        
     }
 }
