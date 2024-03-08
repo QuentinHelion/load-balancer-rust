@@ -1,11 +1,11 @@
 mod responder;
 
 use std::net::TcpListener;
-use std::net::TcpStream;
 
 use responder::handle_client;
 use responder::generator;
 use responder::response;
+use responder::http_str2struct::HttpRequest;
 
 use tokio::task;
 
@@ -20,7 +20,17 @@ async fn main() {
         let stream_buff = stream.try_clone().expect("Failed to clone stream");
         let gen_resp = generator("200 OK", "text/plain", "Hello world ");
         task::spawn(async {
-            handle_client(stream);
+            let result = handle_client(stream);
+
+            // Parse the HTTP request string
+            match HttpRequest::from_string(result) {
+                Ok(parsed_request) => {
+                    println!("Parsed HTTP Request: {:#?}", parsed_request);
+                }
+                Err(err) => {
+                    eprintln!("Error parsing HTTP request: {}", err);
+                }
+    }
             response(gen_resp, stream_buff);
         });
         
