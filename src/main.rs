@@ -8,6 +8,7 @@ use request::handle_client;
 use response::generator;
 use response::response;
 use interpreter::http_str2struct::HttpRequest;
+use response::make_http_error;
 
 use tokio::task;
 
@@ -30,6 +31,7 @@ async fn main() {
                     println!("Parsed HTTP Request: {:#?}", parsed_request);
                 }
                 Err(err) => {
+                    make_http_error(err, stream);
                     eprintln!("Error parsing HTTP request: {}", err);
                 }
     }
