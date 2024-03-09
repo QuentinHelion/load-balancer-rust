@@ -12,7 +12,7 @@ fn main() {
     
     let args = parse_arguments();
     
-    let mut load_balancer = LoadBalancer::new(
+    let load_balancer = LoadBalancer::new(
         args.load_balancer_ip.clone(),
         args.health_check_path.unwrap_or_else(|| "/health-check".to_string()), // Default health check path
         args.health_check_interval.unwrap_or(60), // Default health check interval of 60 seconds
@@ -34,14 +34,16 @@ fn main() {
         }
     };
     log::info!("Server listening on {}", load_balancer.load_balancer_ip);
-
+    let mut load_balancer_clone = load_balancer.clone();
+    load_balancer_clone.start_health_check();
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
                 log::info!("New client connection: {}", stream.peer_addr().unwrap());
-                let mut load_balancer_clone = load_balancer.clone();
+                log::info!("Servers : {:?}", load_balancer);
+                let mut load_balancer_clone2 = load_balancer.clone();
                 thread::spawn(move || {
-                    handle_connection(stream, &mut load_balancer_clone);
+                    handle_connection(stream, &mut load_balancer_clone2);
                 });
             }
             Err(e) => {

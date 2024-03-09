@@ -5,6 +5,8 @@ use log;
 
 pub fn handle_connection(mut client_stream: TcpStream, load_balancer: &mut LoadBalancer) {
     log::info!("LB ip : {:?}", load_balancer.load_balancer_ip);
+
+    // Retrieve the upstream server to forward the request to
     let upstream_server = match load_balancer.connect_to_upstream() {
         Some(server) => server,
         None => {
@@ -23,7 +25,7 @@ pub fn handle_connection(mut client_stream: TcpStream, load_balancer: &mut LoadB
         Err(e) => {
             log::error!("Failed to connect to upstream server {}: {}", upstream_server, e);
             // Mark the upstream server as dead
-            load_balancer.mark_as_dead(upstream_server.clone());
+            load_balancer.mark_as_dead(&upstream_server);
             // Retry connecting to another upstream server
             handle_connection(client_stream, load_balancer);
             return;
