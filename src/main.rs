@@ -1,11 +1,13 @@
-mod responder;
+mod response;
+mod request;
+mod interpreter;
 
 use std::net::TcpListener;
 
-use responder::handle_client;
-use responder::generator;
-use responder::response;
-use responder::http_str2struct::HttpRequest;
+use request::handle_client;
+use response::generator;
+use response::response;
+use interpreter::http_str2struct::HttpRequest;
 
 use tokio::task;
 
