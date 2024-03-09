@@ -24,8 +24,16 @@ pub struct Arguments {
         value_name = "UPSTREAM_SERVERS"
     )]
     pub bind: Vec<String>,
+
+    /// Sliding window size in seconds
+    #[arg(short = 's', required = true)]
+    pub window_size_secs: u64, // Accept as integer
+
+    #[arg(short = 'r', required = true)]
+    pub max_requests: u32,
 }
 
 pub fn parse_arguments() -> Arguments {
     Arguments::parse()
 }
+
