@@ -19,8 +19,6 @@ fn main() {
         args.bind.clone(),
     );
 
-    // Start health checks in a separate thread
-    // load_balancer.start_health_checks();
 
     let listener = match TcpListener::bind(load_balancer.load_balancer_ip.clone()) {
         Ok(listener) => listener,
@@ -35,7 +33,7 @@ fn main() {
     };
     log::info!("Server listening on {}", load_balancer.load_balancer_ip);
     let mut load_balancer_clone = load_balancer.clone();
-    // load_balancer_clone.start_health_check();
+    load_balancer_clone.start_health_check();
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {

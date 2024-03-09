@@ -1,7 +1,7 @@
+use std::sync::{Arc, Mutex};
 use std::collections::HashSet;
-use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+use std::io::{Read, Write};
 use std::thread;
 use std::time::Duration;
 
@@ -12,8 +12,12 @@ pub struct LoadBalancer {
     pub health_check_interval: u64,
     pub upstream_servers: Arc<Vec<String>>,
     pub dead_upstreams: HashSet<String>,
-    pub last_selected_index: Arc<AtomicUsize>, // Change to Arc<AtomicUsize>
+    pub last_selected_index: IndexHolder,
 }
+
+// New type to hold Mutex<usize> and implement Clone
+#[derive(Clone, Debug)]
+pub struct IndexHolder(Arc<Mutex<usize>>);
 
 impl LoadBalancer {
     pub fn new(
@@ -28,7 +32,7 @@ impl LoadBalancer {
             health_check_interval,
             upstream_servers: Arc::new(upstream_servers),
             dead_upstreams: HashSet::new(),
-            last_selected_index: Arc::new(AtomicUsize::new(0)), // Initialize with 0
+            last_selected_index: IndexHolder(Arc::new(Mutex::new(0))),
         }
     }
 
@@ -40,16 +44,16 @@ impl LoadBalancer {
 
         let num_servers = servers.len();
         let mut attempts = 0;
-        let mut index = self.last_selected_index.load(Ordering::SeqCst); // Load index value
+        let mut index = self.last_selected_index.0.lock().unwrap(); // Lock the mutex for last_selected_index
+
         loop {
-            let upstream = servers[index].clone();
+            let upstream = servers[*index].clone();
             match TcpStream::connect(&upstream) {
                 Ok(_) => {
                     log::info!("Connected to upstream server: {}", upstream);
                     let selected_upstream = upstream.clone();
-                    index = (index + 1) % num_servers; // Update index
-                    self.last_selected_index.store(index, Ordering::SeqCst); // Store updated index value
-                    log::info!("Incremented last_selected_index: {}", index);
+                    *index = (*index + 1) % num_servers; // Update the index
+                    log::info!("Incremented last_selected_index: {}", *index);
                     return Some(selected_upstream);
                 }
                 Err(_) => {
@@ -57,12 +61,12 @@ impl LoadBalancer {
                     if attempts >= num_servers {
                         break;
                     }
-                    index = (index + 1) % num_servers; // Update index
-                    self.last_selected_index.store(index, Ordering::SeqCst); // Store updated index value
-                    log::info!("Incremented last_selected_index: {}", index);
+                    *index = (*index + 1) % num_servers; // Update the index
+                    log::info!("Incremented last_selected_index: {}", *index);
                 }
             }
         }
+
         None
     }
 
@@ -80,45 +84,61 @@ impl LoadBalancer {
     }
 
     pub fn health_checking(&mut self) -> Vec<String> {
-        let mut healthy_servers = Vec::new();
-        let servers = self.upstream_servers.clone();
-        let servers = servers.as_ref();
-        for upstream in servers.iter() {
-            if !self.dead_upstreams.contains(upstream) {
-                match TcpStream::connect(upstream) {
-                    Ok(stream) => {
-                        let mut stream = stream;
-                        let request = format!(
-                            "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
-                            self.health_check_path, upstream
-                        );
-                        if let Err(_) = stream.write_all(request.as_bytes()) {
-                            self.mark_as_dead(upstream);
-                        } else {
-                            let mut response = String::new();
-                            if let Err(_) = stream.read_to_string(&mut response) {
-                                self.mark_as_dead(upstream);
-                            } else {
-                                if response.contains("200 OK") {
-                                    healthy_servers.push(upstream.clone());
-                                } else {
-                                    self.mark_as_dead(upstream);
-                                    self.print_dead_servers();
-                                }
-                            }
-                        }
-                    }
-                    Err(_) => {
+    let mut healthy_servers = Vec::new();
+    let servers = self.upstream_servers.clone();
+    let servers = servers.as_ref();
+
+    let dead_servers = self.dead_upstreams.clone();
+    for upstream in servers.iter().chain(&dead_servers) {
+        match TcpStream::connect(upstream) {
+            Ok(stream) => {
+                log::info!("Connected to upstream server: {}", upstream);
+                let mut stream = stream;
+
+                let request = format!(
+                    "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
+                    self.health_check_path, upstream
+                );
+                if let Err(_) = stream.write_all(request.as_bytes()) {
+                    log::error!("Failed to send request to upstream server: {}", upstream);
+                    self.mark_as_dead(upstream);
+                } else {
+                    // log::info!("Request sent to upstream server: {}", upstream);
+
+                    let mut response = String::new();
+                    if let Err(_) = stream.read_to_string(&mut response) {
+                        log::error!("Failed to receive response from upstream server: {}", upstream);
                         self.mark_as_dead(upstream);
+                    } else {
+                        if response.contains("200 OK") {
+                            if self.dead_upstreams.contains(upstream) {
+                                log::info!("Server {} is now healthy. Removed from dead servers.", upstream);
+                            }
+                            log::info!("Server {} is healthy", upstream);
+                            healthy_servers.push(upstream.clone());
+
+                            // Remove the server from dead_upstreams if it was previously marked as dead
+                            self.dead_upstreams.retain(|server| server != upstream);
+                        } else {
+                            log::error!("Response indicates an unhealthy server: {}", upstream);
+                            self.mark_as_dead(upstream);
+                        }
                     }
                 }
             }
+            Err(_) => {
+                log::error!("Failed to connect to upstream server: {}", upstream);
+                self.mark_as_dead(upstream);
+            }
         }
-        healthy_servers
     }
+    self.print_dead_servers();
+    healthy_servers
+}
+
 
     pub fn print_dead_servers(&self) {
-        println!("Dead Servers:");
+        log::warn!("Dead Servers:");
         for server in &self.dead_upstreams {
             println!("{}", server);
         }
