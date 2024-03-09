@@ -35,12 +35,12 @@ fn main() {
     };
     log::info!("Server listening on {}", load_balancer.load_balancer_ip);
     let mut load_balancer_clone = load_balancer.clone();
-    load_balancer_clone.start_health_check();
+    // load_balancer_clone.start_health_check();
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
                 log::info!("New client connection: {}", stream.peer_addr().unwrap());
-                log::info!("Servers : {:?}", load_balancer);
+                log::info!("Index : {:?}", load_balancer.last_selected_index);
                 let mut load_balancer_clone2 = load_balancer.clone();
                 thread::spawn(move || {
                     handle_connection(stream, &mut load_balancer_clone2);
