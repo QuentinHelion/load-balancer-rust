@@ -1,4 +1,4 @@
-use std::io::{Read, Result};
+use std::io::Read;
 use std::net::TcpStream;
 
 pub fn handle_client(mut stream: TcpStream) -> String {
