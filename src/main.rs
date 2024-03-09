@@ -6,7 +6,7 @@ use std::net::TcpListener;
 
 use request::handle_client;
 use response::generator;
-use response::response;
+use response::write_to_stream;
 use interpreter::http_str2struct::HttpRequest;
 use response::make_http_error;
 
@@ -36,7 +36,7 @@ async fn main() {
                     eprintln!("Error parsing HTTP request: {}", err);
                 }
             }
-            response(gen_resp, stream_buff_res);
+            write_to_stream(gen_resp, stream_buff_res);
         });
         
     }
