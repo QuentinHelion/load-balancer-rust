@@ -1,24 +1,26 @@
 mod controller;
 
-use controller::{LoadBalancer, handle_connection, parse_arguments};
+use controller::{handle_connection, parse_arguments, LoadBalancer};
+use log;
 use std::net::TcpListener;
 use std::thread;
-use log;
 
 fn main() {
     env_logger::Builder::new()
         .filter_level(log::LevelFilter::Debug)
         .init();
-    
+
     let args = parse_arguments();
-    
+
     let load_balancer = LoadBalancer::new(
         args.load_balancer_ip.clone(),
-        args.health_check_path.unwrap_or_else(|| "/health-check".to_string()), // Default health check path
+        args.health_check_path
+            .unwrap_or_else(|| "/health-check".to_string()), // Default health check path
         args.health_check_interval.unwrap_or(60), // Default health check interval of 60 seconds
         args.bind.clone(),
+        args.window_size_secs.clone(),
+        args.max_requests.clone(),
     );
-
 
     let listener = match TcpListener::bind(load_balancer.load_balancer_ip.clone()) {
         Ok(listener) => listener,
@@ -31,7 +33,9 @@ fn main() {
             return;
         }
     };
-    log::info!("Server listening on {}", load_balancer.load_balancer_ip);
+    // log::info!("Server listening on {}", load_balancer.load_balancer_ip);
+
+    // log::info!("LB : {:?}", load_balancer);
     let mut load_balancer_clone = load_balancer.clone();
     load_balancer_clone.start_health_check();
     for stream in listener.incoming() {
