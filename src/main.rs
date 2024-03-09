@@ -1,3 +1,5 @@
+// run with :
+//  cargo run -- --load-balancer-ip 192.168.1.196:5555 -b 192.168.1.192:2222,192.168.1.190:8080,192.168.1.191:3333 -p /health-check -i 3 -s 10 -r 5
 mod controller;
 
 use controller::{handle_connection, parse_arguments, LoadBalancer};
