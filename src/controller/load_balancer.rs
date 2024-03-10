@@ -111,7 +111,7 @@ impl LoadBalancer {
     /// If a server is found to be healthy, it is added to the list of healthy servers if it was previously marked as dead.
     /// The health check interval is specified in seconds.
     /// The health check path is the path used for the health check request.
-    /// The health check path is used to send a GET request to the upstream server to check its health (configured on the actrix server side).
+    /// The health check path is used to send a GET request to the upstream server to check its health (configured on the actix server side).
 
     pub fn start_health_check(&mut self) {
         let interval = Duration::from_secs(self.health_check_interval);
