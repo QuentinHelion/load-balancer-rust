@@ -8,8 +8,6 @@ use std::thread;
 use std::time::Duration;
 
 use std::sync::atomic::{AtomicUsize, Ordering};
-use crate::response::write_to_stream;
-use crate::response::generator;
 
 #[derive(Clone, Debug)]
 pub struct LoadBalancer {

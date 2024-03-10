@@ -10,10 +10,7 @@ use std::net::TcpListener;
 use std::thread;
 use log;
 
-
 use controller::{handle_connection, parse_arguments, LoadBalancer};
-use response::{generator,write_to_stream,make_http_error};
-use interpreter::http_str2struct::HttpRequest;
 
 
 #[tokio::main]
@@ -65,12 +62,4 @@ async fn main() {
             }
         }
     }
-
-
-
-
-    let listener = TcpListener::bind("127.0.0.1:8080").expect("Failed to bind to address");
-
-    println!("Listening on 127.0.0.1:8080...");
-
 }
