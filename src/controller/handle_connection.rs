@@ -1,8 +1,20 @@
-use crate::controller::load_balancer::LoadBalancer;
-use crate::controller::RateLimitingError;
+
+use super::load_balancer::LoadBalancer;
+use super::RateLimitingError;
 use log;
 use std::io::{Read, Write};
 use std::net::TcpStream;
+
+use crate::response::generator;
+
+/// Handles a client connection by forwarding the request to an upstream server.
+///
+/// If no upstream servers are available, it sends a 503 Service Unavailable response to the client.
+/// If the maximum number of requests has been exceeded, it sends a 429 Too Many Requests response to the client.
+/// If there is a failure to connect to an upstream server, it retries connecting to another upstream server.
+/// If the connection to the upstream server is successful, it forwards the client request to the upstream server and then forwards the upstream server response to the client.
+/// We have explicit logs as well for the different stages of the connection handling.
+
 
 pub fn handle_connection(mut client_stream: TcpStream, load_balancer: &mut LoadBalancer) {
     log::info!(
@@ -15,7 +27,7 @@ pub fn handle_connection(mut client_stream: TcpStream, load_balancer: &mut LoadB
         Ok(Some(server)) => server,
         Ok(None) => {
             // No available upstream servers, send an error response to the client
-            let response = "HTTP/1.1 503 Service Unavailable\r\n\r\n";
+            let response = generator("503", "text/plain", "Service Unavailable");
             if let Err(e) = client_stream.write_all(response.as_bytes()) {
                 log::error!("Failed to send error response to client: {}", e);
             }
@@ -26,7 +38,7 @@ pub fn handle_connection(mut client_stream: TcpStream, load_balancer: &mut LoadB
             match err {
                 RateLimitingError::ExceededMaxRequests => {
                     // Send 429 Too Many Requests status code to the client
-                    let response = "HTTP/1.1 429 Too Many Requests\r\n\r\n";
+                    let response = generator("429", "text/plain", "Too Many Requests");
                     if let Err(e) = client_stream.write_all(response.as_bytes()) {
                         log::error!("Failed to send 429 response to client: {}", e);
                     }

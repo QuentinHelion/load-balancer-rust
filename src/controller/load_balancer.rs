@@ -6,9 +6,9 @@ use std::net::TcpStream;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+/// Represents a load balancer which distributes incoming requests among upstream servers.
 #[derive(Clone, Debug)]
 pub struct LoadBalancer {
     pub load_balancer_ip: String,
@@ -17,22 +17,22 @@ pub struct LoadBalancer {
     pub upstream_servers: Arc<Vec<String>>,
     pub dead_upstreams: HashSet<String>,
     pub last_selected_index: IndexHolder,
-    pub rate_limiter: SlidingWindowRateLimiter, // New field for rate limiter
+    pub rate_limiter: SlidingWindowRateLimiter,
 }
 
-// New type to hold Mutex<usize> and implement Clone
 #[derive(Debug)]
 pub struct IndexHolder {
     index: Arc<AtomicUsize>,
 }
 
 impl IndexHolder {
+    /// Creates a new `IndexHolder` with the specified initial value. IndexHolder is a wrapper around an AtomicUsize that is shared between threads and used to keep track of the index of the last selected upstream server.
     pub fn new(value: usize) -> Self {
         IndexHolder {
             index: Arc::new(AtomicUsize::new(value)),
         }
     }
-
+    /// Atomically increments the index by 1 and returns the result.
     pub fn increment(&self, num_servers: usize) -> usize {
         let index = self.index.fetch_add(1, Ordering::Relaxed) % num_servers;
         index
@@ -48,6 +48,7 @@ impl Clone for IndexHolder {
 }
 
 impl LoadBalancer {
+    /// Creates a new `LoadBalancer` instance.
     pub fn new(
         load_balancer_ip: String,
         health_check_path: String,
@@ -66,9 +67,14 @@ impl LoadBalancer {
             rate_limiter: SlidingWindowRateLimiter::new(
                 Duration::from_secs(window_size_secs),
                 max_requests,
-            ), // Initialize rate limiter
+            ), 
         }
     }
+    /// Attempts to connect to an upstream server.
+    /// If successful, returns the IP address of the upstream server.
+    /// If the maximum number of requests has been exceeded, returns `RateLimitingError::ExceededMaxRequests`.
+    /// If there is a failure to connect to an upstream server, returns `RateLimitingError::FailedToConnect`.
+    /// the load balancing algorithm is a simple round-robin algorithm that selects the next upstream server based on the index.
 
     pub fn connect_to_upstream(&self) -> Result<Option<String>, RateLimitingError> {
         let servers = self.upstream_servers.as_ref();
@@ -99,6 +105,14 @@ impl LoadBalancer {
         }
     }
 
+    /// Starts the health check for the load balancer.
+    /// The health check runs in a separate thread and checks the health of the upstream servers at regular intervals.
+    /// If a server is found to be unhealthy, it is removed from the list of healthy servers.
+    /// If a server is found to be healthy, it is added to the list of healthy servers if it was previously marked as dead.
+    /// The health check interval is specified in seconds.
+    /// The health check path is the path used for the health check request.
+    /// The health check path is used to send a GET request to the upstream server to check its health (configured on the actix server side).
+
     pub fn start_health_check(&mut self) {
         let interval = Duration::from_secs(self.health_check_interval);
         let mut self_clone = self.clone();
@@ -116,6 +130,9 @@ impl LoadBalancer {
         });
     }
 
+    /// Performs health checking on the upstream servers.
+    /// Returns a list of healthy servers.
+    /// We added explicit logs for the different stages of the health checking process to help with debugging and keep track of the health of the servers.
     pub fn health_checking(&mut self) -> Vec<String> {
         let mut healthy_servers = Vec::new();
         let servers = self.upstream_servers.clone();
@@ -127,11 +144,12 @@ impl LoadBalancer {
                 Ok(stream) => {
                     log::info!("Connected to upstream server: {}", upstream);
                     let mut stream = stream;
-
+                    /// Send a GET request to the upstream server to check its health.
                     let request = format!(
                         "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
                         self.health_check_path, upstream
                     );
+                    /// Send the request and read the response.
                     if let Err(_) = stream.write_all(request.as_bytes()) {
                         log::error!("Failed to send request to upstream server: {}", upstream);
                         self.mark_as_dead(upstream);
@@ -151,7 +169,7 @@ impl LoadBalancer {
                                     log::debug!(
                                         "Server {} is now healthy. Removed from dead servers.",
                                         upstream
-                                    );
+                                    );    
                                 }
                                 log::info!("Server {} is healthy", upstream);
                                 healthy_servers.push(upstream.clone());
@@ -175,6 +193,7 @@ impl LoadBalancer {
         healthy_servers
     }
 
+    /// Prints the list of dead servers.
     pub fn print_dead_servers(&self) {
         log::warn!("Dead Servers:");
         for server in &self.dead_upstreams {
@@ -182,6 +201,7 @@ impl LoadBalancer {
         }
     }
 
+    /// Marks the specified upstream server as dead by adding it to the list of dead upstream servers.
     pub fn mark_as_dead(&mut self, upstream: &String) {
         self.dead_upstreams.insert(upstream.to_string());
     }

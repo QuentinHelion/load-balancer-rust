@@ -1,7 +1,19 @@
-mod write_to_stream;
+/// This module provides utilities for generating HTTP responses.
+///
+/// It includes the `generator` function, which can be used to generate HTTP responses with
+/// specified status codes, content types, and content.
+///
+/// # Examples
+///
+/// ```rust
+/// use crate::gen::generator;
+///
+/// let response = generator("200 OK", "text/plain", "Hello, World!");
+/// println!("Generated Response: {}", response);
+/// ```
+///
+/// The `gen` module contains the `generator` function, and it can be accessed using
+/// `use crate::gen::generator;`.
 mod gen;
-mod make_http_error;
 
-pub use write_to_stream::write_to_stream;
 pub use gen::generator;
-pub use make_http_error::make_http_error;
