@@ -1,4 +1,4 @@
-# load-balencer-rust
+# load-balancer-rust
 
 
 ## Run
