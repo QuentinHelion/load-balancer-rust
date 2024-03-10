@@ -1,3 +1,4 @@
+
 use super::load_balancer::LoadBalancer;
 use super::RateLimitingError;
 use log;
@@ -5,6 +6,15 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 
 use crate::response::generator;
+
+/// Handles a client connection by forwarding the request to an upstream server.
+///
+/// If no upstream servers are available, it sends a 503 Service Unavailable response to the client.
+/// If the maximum number of requests has been exceeded, it sends a 429 Too Many Requests response to the client.
+/// If there is a failure to connect to an upstream server, it retries connecting to another upstream server.
+/// If the connection to the upstream server is successful, it forwards the client request to the upstream server and then forwards the upstream server response to the client.
+/// We have explicit logs as well for the different stages of the connection handling.
+
 
 pub fn handle_connection(mut client_stream: TcpStream, load_balancer: &mut LoadBalancer) {
     log::info!(

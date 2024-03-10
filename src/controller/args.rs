@@ -1,21 +1,28 @@
 use clap::{arg, Parser};
 
+/// Represents the command-line arguments for the load balancer.
 #[derive(Parser, Debug)]
 #[command(long_about = None)]
+
+/// Here is how it works:
+/// in the #[arg] attribute, we can specify the short and long flags for the argument, whether it is required, and the value delimiter (it was useful to specify multiple upstream servers).
+/// The value_name attribute specifies the name of the value in the help message.
+/// 
+
 pub struct Arguments {
-    /// Load balancer ip address
+    /// Load balancer IP address.
     #[arg(short, long, required = true)]
     pub load_balancer_ip: String,
 
-    /// Health check path
+    /// Health check path.
     #[arg(short = 'p', required = true)]
     pub health_check_path: Option<String>,
 
-    /// Health check interval
+    /// Health check interval : the time interval in seconds between health checks.
     #[arg(short = 'i', required = true)]
     pub health_check_interval: Option<u64>,
 
-    /// upstream_servers_ips
+    /// Upstream server IPs : the LXC container IPs of the web servers.
     #[arg(
         required = true,
         short,
@@ -25,18 +32,21 @@ pub struct Arguments {
     )]
     pub bind: Vec<String>,
 
-    /// Sliding window size in seconds
+    /// Sliding window size in seconds : how long the user can send requests before they are rate limited.
     #[arg(short = 's', required = true)]
-    pub window_size_secs: u64, // Accept as integer
+    pub window_size_secs: u64,
 
+    /// Maximum number of requests : the maximum number of requests the user can send within the sliding window.
     #[arg(short = 'r', required = true)]
     pub max_requests: u32,
 }
 
+/// Parses command-line arguments and returns a `Arguments` struct.
 pub fn parse_arguments() -> Arguments {
     Arguments::parse()
 }
 
+/// Tests for the `parse_arguments` function.
 #[cfg(test)]
 mod tests {
     use super::*;

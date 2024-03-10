@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+/// Represents a sliding window rate limiter for controlling request rates.
 #[derive(Debug, Clone)]
 pub struct SlidingWindowRateLimiter {
     window_size: Duration,
@@ -12,12 +13,7 @@ pub struct SlidingWindowRateLimiter {
 }
 
 impl SlidingWindowRateLimiter {
-    // pub fn get_window_size(&self) -> Duration {
-    //     self.window_size
-    // }
-    // pub fn get_max_requests(&self) -> u32 {
-    //     self.max_requests
-    // }
+    /// Creates a new `SlidingWindowRateLimiter` instance with the specified window size and maximum requests.
     pub fn new(window_size: Duration, max_requests: u32) -> SlidingWindowRateLimiter {
         SlidingWindowRateLimiter {
             window_size,
@@ -28,6 +24,7 @@ impl SlidingWindowRateLimiter {
         }
     }
 
+    /// Checks if a request is allowed based on the rate limiting configuration.
     pub fn allow_request(&self) -> bool {
         let now_secs = self.start_time.elapsed().as_secs() as u64;
         log::debug!("Value of Instant::now(): {:?}", now_secs);
@@ -60,6 +57,9 @@ impl SlidingWindowRateLimiter {
             false
         }
     }
+
+    /// Checks the rate limiting state and resets the request count if needed.
+    /// This method should be called periodically to reset the request count and remove old timestamps.
     pub fn rate_limit_check(&self) {
         let mut requests = self.requests.lock().unwrap();
         let mut last_window_start = self.last_window_start.lock().unwrap();
