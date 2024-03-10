@@ -8,6 +8,8 @@ use std::thread;
 use std::time::Duration;
 
 use std::sync::atomic::{AtomicUsize, Ordering};
+use crate::response::write_to_stream;
+use crate::response::generator;
 
 #[derive(Clone, Debug)]
 pub struct LoadBalancer {
@@ -128,10 +130,8 @@ impl LoadBalancer {
                     log::info!("Connected to upstream server: {}", upstream);
                     let mut stream = stream;
 
-                    let request = format!(
-                        "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
-                        self.health_check_path, upstream
-                    );
+                    let request = generator("200", "text/plain", "Connection: close");
+
                     if let Err(_) = stream.write_all(request.as_bytes()) {
                         log::error!("Failed to send request to upstream server: {}", upstream);
                         self.mark_as_dead(upstream);
