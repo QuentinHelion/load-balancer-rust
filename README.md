@@ -5,6 +5,15 @@
 cargo run -- --load-balancer-ip <IP-LB:PORT> -b <IP-SRV1:PORT>, <IP-SRVX:PORT>, <IP-SRVXX:PORT> -p /health-check -i 3 -s 10 -r 5
 
 
+## About
+
+Conteneurs LXC utilisés pour ce projet.
+
+LoadBalancer : contient le code de l'équilibreur de charge.
+pour les upstreams, nous avons un template d'un serveur web actix LXC préconfiguré pour pouvoir déployer autant de serveurs web que nécessaire. Nous avons juste besoin de changer l'ip/port (nous avons gardé les chemins originaux que la doc nous a donné et nous avons ajouté le GET pour le health-check)
+
+
+## Question
 
 Avez-vous franchi toutes les étapes ? Jusqu'à l'étape 3 (+ un peu de 4)
 Qu'avez-vous tenté ou non ?  Beaucoup de choses
