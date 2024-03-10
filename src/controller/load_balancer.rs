@@ -130,7 +130,10 @@ impl LoadBalancer {
                     log::info!("Connected to upstream server: {}", upstream);
                     let mut stream = stream;
 
-                    let request = generator("200", "text/plain", "Connection: close");
+                    let request = format!(
+                        "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
+                        self.health_check_path, upstream
+                    );
 
                     if let Err(_) = stream.write_all(request.as_bytes()) {
                         log::error!("Failed to send request to upstream server: {}", upstream);
@@ -151,7 +154,15 @@ impl LoadBalancer {
                                     log::debug!(
                                         "Server {} is now healthy. Removed from dead servers.",
                                         upstream
-                                    );
+                                    );                                    
+                                    // format!(
+                                    //     "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
+                                    //     self.health_check_path, upstream
+                                    // );    
+                                    // format!(
+                                    //     "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
+                                    //     self.health_check_path, upstream
+                                    // );
                                 }
                                 log::info!("Server {} is healthy", upstream);
                                 healthy_servers.push(upstream.clone());
